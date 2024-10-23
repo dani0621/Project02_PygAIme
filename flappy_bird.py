@@ -34,6 +34,9 @@ base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.
 
 gen = 0
 
+def p():
+    print('hi')
+
 # creates the bird agent
 class Bird:
     MAX_ROTATION = 25
@@ -353,10 +356,11 @@ def eval_genomes(genomes, config):
         draw_window(WIN, birds, pipes, base, score, gen, pipe_ind)
 
         # limits the score
-
-        if score > 100:
+        '''
+        if score > 150:
             pickle.dump(nets[0],open("best.pickle", "wb"))
             break
+            '''
 
 
 
@@ -403,7 +407,7 @@ def load_best_model(config_file):
 
 # creates game just for best bird to play (doesn't run NEAT again)
 
-def play_with_best_model(net, config):
+def play_with_best_model(net):
     # Initialize bird and pipes like before
     bird = Bird(230, 350)
     base = Base(FLOOR)
@@ -446,6 +450,9 @@ def play_with_best_model(net, config):
         bird.move()
 
         # Updates the base and pipes
+        # took away everything that had to do with NEAT + reward system
+        # simply updates the frames/window and makes new pipes for the bird
+        # records score
         base.move()
 
         rem = []
@@ -453,7 +460,7 @@ def play_with_best_model(net, config):
         for pipe in pipes:
             pipe.move()
 
-            # Check for collision like before
+            # Check for collision like before, quits if it doesn't
             if pipe.collide(bird, win):
                 run = False
 
@@ -494,7 +501,7 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1 and sys.argv[1] == 'play':
         # If 'play' argument is passed, load the best model and play the game with it
         net = load_best_model(config_path)
-        play_with_best_model(net, config_path)
+        play_with_best_model(net)
     else:
         print("Please specify 'train' to train the model or 'play' to play with the best model.")
 
@@ -506,12 +513,12 @@ if __name__ == '__main__':
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    winner = population.run(eval_genomes, 100)
+    genome_winner = population.run(eval_genomes, 100)
 
     # plots how well the agents do over time (based on fitness score)
     visualize.plot_stats(stats, view=True)
     node_names = {0: 'Bird_Y', 1: 'Pipe_Top', 2: 'Pipe_Bottom', 3: 'Velocity', 4: 'Dist_Pipe', 5: 'Base_Dist',
                   -1: 'Flap'}
-    visualize.draw_net(config, winner, view=True, node_names=node_names)
+    visualize.draw_net(config, genome_winner, view=True, node_names=node_names)
 
     run(config_path)
