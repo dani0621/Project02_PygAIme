@@ -7,8 +7,8 @@ digraph {
 	-5 [fillcolor=lightgray shape=box style=filled]
 	-6 [fillcolor=lightgray shape=box style=filled]
 	Bird_Y [fillcolor=lightblue style=filled]
-	-2 -> Bird_Y [color=green penwidth=0.5738677558327901 style=solid]
-	-3 -> Bird_Y [color=red penwidth=0.48268209329574074 style=solid]
-	-6 -> Bird_Y [color=red penwidth=0.17493476927493645 style=solid]
-	-4 -> Bird_Y [color=green penwidth=0.16635404407110943 style=dotted]
+	-2 -> Bird_Y [color=green penwidth=1.622198944321949 style=solid]
+	-6 -> Bird_Y [color=red penwidth=0.36030665335436696 style=solid]
+	Flap -> Bird_Y [color=red penwidth=0.38185846644625965 style=solid]
+	-4 -> Bird_Y [color=red penwidth=0.21673483499222068 style=dotted]
 }

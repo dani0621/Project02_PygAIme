@@ -12,6 +12,7 @@ import time
 import neat
 import visualize
 import pickle
+import sys
 pygame.font.init()  # initialize the fonts used to display the text in the popup window
 
 # setting up popup window parameters
@@ -299,7 +300,10 @@ def eval_genomes(genomes, config):
                 abs(bird.y - pipes[pipe_ind].bottom), # distance from bird to bottom of the pipe
                 bird.vel,  # bird's velocity
                 pipes[pipe_ind].x - bird.x, # horizontal distance from pipe to bird
-                abs(FLOOR - bird.y) # added input of the distance from bird to the ground
+                abs(FLOOR - bird.y), # added input of the distance from bird to the ground
+                pipes[pipe_ind].UP_DOWN_SPEED,  # added pipe speed as input
+                pipes[pipe_ind].direction # added direction of pip going up or down
+
             ))
 
             # If the output from the neural network suggests jumping (output > 0.5, meaning the probability is greater than 0.5), the bird jumps
@@ -349,9 +353,11 @@ def eval_genomes(genomes, config):
         draw_window(WIN, birds, pipes, base, score, gen, pipe_ind)
 
         # limits the score
-        if score > 200:
+
+        if score > 100:
             pickle.dump(nets[0],open("best.pickle", "wb"))
             break
+
 
 
 # runs the NEAT algorithm to train the neural network to play the game
@@ -369,16 +375,129 @@ def run(config_file):
     p.add_reporter(stats)
 
     # Run for up to 100 generations
-    winner = p.run(eval_genomes, 100)
+    winner = p.run(eval_genomes, 1000)
+
+    # saves the best model/agent
+    with open('best_model.pickle', 'wb') as f:
+        pickle.dump(winner, f)
 
     # show final stats of the best agent
     print('\nBest genome:\n{!s}'.format(winner))
+
+
+# saves best model
+def load_best_model(config_file):
+    # Loads the best genome (agent) from previous training
+    with open('best_model.pickle', 'rb') as f:
+        best_genome = pickle.load(f)
+
+    # Load the NEAT config, ChatGPT help with this
+    best_config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
+                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                config_file)
+
+    # Create the neural network from the best genome
+    net = neat.nn.FeedForwardNetwork.create(best_genome, best_config)
+
+    return net
+
+# creates game just for best bird to play (doesn't run NEAT again)
+
+def play_with_best_model(net, config):
+    # Initialize bird and pipes like before
+    bird = Bird(230, 350)
+    base = Base(FLOOR)
+    pipes = [Pipe(700)]
+    score = 0
+    win = WIN
+    clock = pygame.time.Clock()
+
+    run = True
+    while run:
+        clock.tick(60)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+                quit()
+
+        # Use the first pipe for neural network input like before
+        pipe_ind = 0
+        if len(pipes) > 1 and bird.x > pipes[0].x + pipes[0].PIPE_TOP.get_width():
+            pipe_ind = 1
+
+        # same outputs as before
+        output = net.activate((
+            bird.y,
+            abs(bird.y - pipes[pipe_ind].height),
+            abs(bird.y - pipes[pipe_ind].bottom),
+            bird.vel,
+            pipes[pipe_ind].x - bird.x,
+            abs(FLOOR - bird.y),
+            pipes[pipe_ind].UP_DOWN_SPEED,
+            pipes[pipe_ind].direction
+        ))
+
+        # jumps if probability above 0.5
+        if output[0] > 0.5:
+            bird.jump()
+
+        bird.move()
+
+        # Updates the base and pipes
+        base.move()
+
+        rem = []
+        add_pipe = False
+        for pipe in pipes:
+            pipe.move()
+
+            # Check for collision like before
+            if pipe.collide(bird, win):
+                run = False
+
+            if pipe.x + pipe.PIPE_TOP.get_width() < 0:
+                rem.append(pipe)
+
+            if not pipe.passed and pipe.x < bird.x:
+                pipe.passed = True
+                add_pipe = True
+
+        if add_pipe:
+            score += 1  # reward +1 for passing pipe
+            pipes.append(Pipe(WIN_WIDTH))
+
+        for r in rem:
+            pipes.remove(r)
+
+        # Check if bird hits the floor or goes off-screen, ends game
+        if bird.y + bird.img.get_height() - 10 >= FLOOR or bird.y < -50:
+            run = False
+
+        # updates the window state
+        draw_window(win, [bird], pipes, base, score, 1, pipe_ind)
+
+    print(f"Game over! Final Score: {score}")
+
 
 
 if __name__ == '__main__':
     # Determine path to configuration file
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, 'config-feedforward.txt')
+
+    #ChatGPT help to differentiate the two in terminal
+    if len(sys.argv) > 1 and sys.argv[1] == 'train':
+        # If 'train' argument is passed, run the NEAT simulation to train the model
+        run(config_path)
+    elif len(sys.argv) > 1 and sys.argv[1] == 'play':
+        # If 'play' argument is passed, load the best model and play the game with it
+        net = load_best_model(config_path)
+        play_with_best_model(net, config_path)
+    else:
+        print("Please specify 'train' to train the model or 'play' to play with the best model.")
+
 
     #ChatGPT help with writing config variable
     config = neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation,
@@ -387,7 +506,7 @@ if __name__ == '__main__':
     population.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     population.add_reporter(stats)
-    winner = population.run(eval_genomes, 50)
+    winner = population.run(eval_genomes, 100)
 
     # plots how well the agents do over time (based on fitness score)
     visualize.plot_stats(stats, view=True)
