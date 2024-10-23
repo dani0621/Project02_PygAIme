@@ -356,11 +356,10 @@ def eval_genomes(genomes, config):
         draw_window(WIN, birds, pipes, base, score, gen, pipe_ind)
 
         # limits the score
-        '''
-        if score > 150:
-            pickle.dump(nets[0],open("best.pickle", "wb"))
+
+        if score > 10:
+            pickle.dump(ge[0], open("best_model.pickle", "wb"))  # Save the genome, not the network
             break
-            '''
 
 
 
@@ -392,13 +391,13 @@ def run(config_file):
 # saves best model
 def load_best_model(config_file):
     # Loads the best genome (agent) from previous training
-    with open('best_model.pickle', 'rb') as f:
-        best_genome = pickle.load(f)
-
-    # Load the NEAT config, ChatGPT help with this
     best_config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction,
-                                neat.DefaultSpeciesSet, neat.DefaultStagnation,
-                                config_file)
+                                     neat.DefaultSpeciesSet, neat.DefaultStagnation,
+                                     config_file)
+
+    # Load the best genome
+    with open('best_genome.pickle', 'rb') as f:  # changed to best_genome.pickle
+        best_genome = pickle.load(f)
 
     # Create the neural network from the best genome
     net = neat.nn.FeedForwardNetwork.create(best_genome, best_config)
@@ -462,7 +461,8 @@ def play_with_best_model(net):
 
             # Check for collision like before, quits if it doesn't
             if pipe.collide(bird, win):
-                run = False
+                pygame.quit()  # quits pygame
+                sys.exit() # quits system
 
             if pipe.x + pipe.PIPE_TOP.get_width() < 0:
                 rem.append(pipe)
@@ -480,7 +480,8 @@ def play_with_best_model(net):
 
         # Check if bird hits the floor or goes off-screen, ends game
         if bird.y + bird.img.get_height() - 10 >= FLOOR or bird.y < -50:
-            run = False
+            pygame.quit()  # quits pygame
+            sys.exit() # quits system
 
         # updates the window state
         draw_window(win, [bird], pipes, base, score, 1, pipe_ind)
