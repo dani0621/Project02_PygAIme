@@ -60,12 +60,16 @@ I also plotted the highest fitness score of each generation, and I saw that even
   <img width="400" alt="imports" src=https://github.com/user-attachments/assets/47437479-5a48-4794-9a58-3c60d3ada9e9>
 </div>
 
+I also programmed an additional block to save my best flying bird (stayed alive the longest). I used pickle to download hte model and then additional help from ChatGPT because Iwas running into issues with pathing to the configuration file. I have to run this through terminal so that I could differentiate from my NEAT algorithm running or my best flying bird. This way, I can always pull the bird that did play extremely well (don't have to run through the generations again).
+
 ### Problems
 I originally thought that by adding more inputs like the velocity of the bird, the distance the bird was away from the pipes and the time since the bird last jumped it would cause the bird to train for less generations because it had more information to train from. However, I found that inputs such as the time since the last jump that didn’t have a significant impact on if the bird should jump next could be ignored because adding those factors lead my training to increase significantly. I had to play around with which inputs I wanted to include and exclude.
 
 I also had to add rewards like for when the bird flew close to the pipe without hitting it because in the beginning the agents struggled with getting to the pipe. They were quite far away so I started adding incentives so that the birds would get closer and closer to navigating the pipe until it could pass through it and get the larger reward.
 
 I also found that the number of generations that it took the model to learn sometimes varied drastically where some took less than 15 while others took almost 30-40 with some some needing more than 50 generations. I hadn’t changed anything between the two runs; I only pressed the run button. I often saw this inconsistency as I ran my program more and more; the number of generations it takes the bird to learn the game seems to heavily depend on the randomly generated neural networks in the beginning. This is something I want to touch on in my future work with this project.
+
+Another issue I ran into was downloading the libraries. The versions of python and other libraries like TensorFlow didn't work together, and trying to fix that messed up my PATH settings in my terminal. It would say that all the libraries I needed were downloaded, but then they woudln't actually run.
 
 ### Future Work
 In the future, I want to make it so that the number of generations it takes for the model to learn the game is more consistent because sometimes there is a drastic difference in the number of generations it takes to learn the game. Not only that but I also want to work on if there are other inputs that I could use to increase the efficiency of learning for NEAT, especially when I increase the speed, fps, or other factors to make the game harder. Another thing I could play with is to have different modes in flappy bird like horizontal/vertical flip or a change in the color gradient.
