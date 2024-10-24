@@ -2,7 +2,8 @@
 # structure basically came from Tech with Tim YouTube video tutorials (any resource used is cited in my README)
 # modified the inputs (added additional inputs) as well as wrote the program to visualize the neural networks
 # modified the pipes so that they move up and down randomly to make it harder to train the agent
-# also used ChatGPT to debug and install libraries (ran into trouble calling variables outside their scope)
+# also added a training model vs playing so that in the playing one, the best agent is playing and not have to train again
+# used ChatGPT to debug and install libraries (ran into trouble calling variables outside their scope), used it for help with configuration code w NEAT
 # I don't know if I have to cite this, but I used autocorrect (for code) because PyCharm said the statement I used could be simplified
 
 import pygame
@@ -33,9 +34,6 @@ bird_images = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","b
 base_img = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs","base.png")).convert_alpha())
 
 gen = 0
-
-def p():
-    print('hi')
 
 # creates the bird agent
 class Bird:
@@ -245,6 +243,41 @@ def draw_window(win, birds, pipes, base, score, gen, pipe_ind):
     # how many birds/agents are alive
     score_label = STAT_FONT.render("Alive: " + str(len(birds)),1,(255,255,255))
     win.blit(score_label, (10, 50))
+
+    pygame.display.update()
+
+
+def draw_best_window(win, birds, pipes, base, score, gen, pipe_ind):
+    if gen == 0:
+        gen = 1
+    win.blit(bg_img, (0,0))
+
+    # draws pipes
+    for pipe in pipes:
+        pipe.draw(win)
+
+    # draws base
+    base.draw(win)
+
+    # draw birds
+    for bird in birds:
+        # draw lines from bird to pipe
+        if DRAW_LINES:
+            try:
+                pygame.draw.line(win, (255,0,0), (bird.x+bird.img.get_width()/2, bird.y + bird.img.get_height()/2), (pipes[pipe_ind].x + pipes[pipe_ind].PIPE_TOP.get_width()/2, pipes[pipe_ind].height), 5)
+                pygame.draw.line(win, (255,0,0), (bird.x+bird.img.get_width()/2, bird.y + bird.img.get_height()/2), (pipes[pipe_ind].x + pipes[pipe_ind].PIPE_BOTTOM.get_width()/2, pipes[pipe_ind].bottom), 5)
+            except:
+                pass
+        # draw bird
+        bird.draw(win)
+
+    # Number of pipes passed/ Score
+    score_label = STAT_FONT.render("Score: " + str(score),1,(255,255,255))
+    win.blit(score_label, (WIN_WIDTH - score_label.get_width() - 15, 10))
+
+    # which generation is being shown
+    score_label = STAT_FONT.render("Best Bird",1,(255,255,255))
+    win.blit(score_label, (10, 10))
 
     pygame.display.update()
 
@@ -484,7 +517,7 @@ def play_with_best_model(net):
             sys.exit() # quits system
 
         # updates the window state
-        draw_window(win, [bird], pipes, base, score, 1, pipe_ind)
+        draw_best_window(win, [bird], pipes, base, score, 1, pipe_ind)
 
     print(f"Game over! Final Score: {score}")
 
