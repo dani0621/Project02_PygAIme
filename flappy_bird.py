@@ -109,7 +109,7 @@ class Bird:
         # tilt the bird
         blitRotateCenter(win, self.img, (self.x, self.y), self.tilt)
 
-    # gets mask for current bird
+    # gets mask for current bird, uses pixel-perfect collision detection for the current bird image
     def get_mask(self):
         return pygame.mask.from_surface(self.img)
 
@@ -154,7 +154,7 @@ class Pipe():
         win.blit(self.PIPE_TOP, (self.x, self.top))
         win.blit(self.PIPE_BOTTOM, (self.x, self.bottom))
 
-    # detects if the agent/bird has collided with a pipe (if the image of the bird and top/bottom pipe has overlapped in any place)
+    # detects if the agent/bird has collided with a pipe (if the image of the bird and top/bottom pipe has overlapped in any pixel)
     def collide(self, bird, win):
         # Tech With Tim's code
         bird_mask = bird.get_mask()
@@ -246,41 +246,6 @@ def draw_window(win, birds, pipes, base, score, gen, pipe_ind):
 
     pygame.display.update()
 
-
-def draw_best_window(win, birds, pipes, base, score, gen, pipe_ind):
-    if gen == 0:
-        gen = 1
-    win.blit(bg_img, (0,0))
-
-    # draws pipes
-    for pipe in pipes:
-        pipe.draw(win)
-
-    # draws base
-    base.draw(win)
-
-    # draw birds
-    for bird in birds:
-        # draw lines from bird to pipe
-        if DRAW_LINES:
-            try:
-                pygame.draw.line(win, (255,0,0), (bird.x+bird.img.get_width()/2, bird.y + bird.img.get_height()/2), (pipes[pipe_ind].x + pipes[pipe_ind].PIPE_TOP.get_width()/2, pipes[pipe_ind].height), 5)
-                pygame.draw.line(win, (255,0,0), (bird.x+bird.img.get_width()/2, bird.y + bird.img.get_height()/2), (pipes[pipe_ind].x + pipes[pipe_ind].PIPE_BOTTOM.get_width()/2, pipes[pipe_ind].bottom), 5)
-            except:
-                pass
-        # draw bird
-        bird.draw(win)
-
-    # Number of pipes passed/ Score
-    score_label = STAT_FONT.render("Score: " + str(score),1,(255,255,255))
-    win.blit(score_label, (WIN_WIDTH - score_label.get_width() - 15, 10))
-
-    # which generation is being shown
-    score_label = STAT_FONT.render("Best Bird",1,(255,255,255))
-    win.blit(score_label, (10, 10))
-
-    pygame.display.update()
-
 # simulates the current generation birds and their fitness score (based on how far they get in the game)
 def eval_genomes(genomes, config):
     global WIN, gen
@@ -321,14 +286,14 @@ def eval_genomes(genomes, config):
 
         pipe_ind = 0
         if len(birds) > 0:
-            if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():  # determines whether to use the first or second ipe on the screen for neural network input
+            if len(pipes) > 1 and birds[0].x > pipes[0].x + pipes[0].PIPE_TOP.get_width():  # determines whether to use the first or second pipe on the screen for neural network input
                 pipe_ind = 1
 
         for x, bird in enumerate(birds):
             ge[x].fitness += 0.1 # give each bird a fitness reward of 0.1 for each frame it stays alive
             bird.move()
 
-            # send bird location, top pipe location and bottom pipe location, bird's velocity, bird's distance from the pipe and distance frmo the bird to the ground
+            # send bird location, top pipe location and bottom pipe location, bird's velocity, bird's distance from the pipe and distance from the bird to the ground, the speed of the pipe, and the direction of thepipe
             # and determine from network whether the bird should jump or not
             output = nets[birds.index(bird)].activate((
                 bird.y,  # Bird's vertical position
@@ -342,7 +307,7 @@ def eval_genomes(genomes, config):
 
             ))
 
-            # If the output from the neural network suggests jumping (output > 0.5, meaning the probability is greater than 0.5), the bird jumps
+            # If the output from the neural network suggests jumping (output > 0.5, meaning if the tanH activation function outputs a value greater than 0.5), the bird jumps
             if output[0] > 0.5:
                 bird.jump()
 
@@ -389,8 +354,7 @@ def eval_genomes(genomes, config):
         draw_window(WIN, birds, pipes, base, score, gen, pipe_ind)
 
         # limits the score
-
-        if score > 10:
+        if score > 100:
             pickle.dump(ge[0], open("best_model.pickle", "wb"))  # Save the genome, not the network
             break
 
@@ -420,6 +384,40 @@ def run(config_file):
     # show final stats of the best agent
     print('\nBest genome:\n{!s}'.format(winner))
 
+# made a separate window for best model so that the text on top says Best Bird and not gen/alive
+def draw_best_window(win, birds, pipes, base, score, gen, pipe_ind):
+    if gen == 0:
+        gen = 1
+    win.blit(bg_img, (0,0))
+
+    # draws pipes
+    for pipe in pipes:
+        pipe.draw(win)
+
+    # draws base
+    base.draw(win)
+
+    # draw birds
+    for bird in birds:
+        # draw lines from bird to pipe
+        if DRAW_LINES:
+            try:
+                pygame.draw.line(win, (255,0,0), (bird.x+bird.img.get_width()/2, bird.y + bird.img.get_height()/2), (pipes[pipe_ind].x + pipes[pipe_ind].PIPE_TOP.get_width()/2, pipes[pipe_ind].height), 5)
+                pygame.draw.line(win, (255,0,0), (bird.x+bird.img.get_width()/2, bird.y + bird.img.get_height()/2), (pipes[pipe_ind].x + pipes[pipe_ind].PIPE_BOTTOM.get_width()/2, pipes[pipe_ind].bottom), 5)
+            except:
+                pass
+        # draw bird
+        bird.draw(win)
+
+    # Number of pipes passed/ Score
+    score_label = STAT_FONT.render("Score: " + str(score),1,(255,255,255))
+    win.blit(score_label, (WIN_WIDTH - score_label.get_width() - 15, 10))
+
+    # which generation is being shown
+    score_label = STAT_FONT.render("Best Bird",1,(255,255,255))
+    win.blit(score_label, (10, 10))
+
+    pygame.display.update()
 
 # saves best model
 def load_best_model(config_file):
@@ -429,7 +427,7 @@ def load_best_model(config_file):
                                      config_file)
 
     # Load the best genome
-    with open('best_genome.pickle', 'rb') as f:  # changed to best_genome.pickle
+    with open('best_genome.pickle', 'rb') as f:  # changed to best_genome.pickle, chatGPT help because files were opening correctly
         best_genome = pickle.load(f)
 
     # Create the neural network from the best genome
@@ -520,7 +518,6 @@ def play_with_best_model(net):
         draw_best_window(win, [bird], pipes, base, score, 1, pipe_ind)
 
     print(f"Game over! Final Score: {score}")
-
 
 
 if __name__ == '__main__':
